@@ -5,6 +5,7 @@ import NonTech from "./pages/NonTech.jsx";
 import Register from "./pages/Register.jsx";
 import Greeting from "./pages/Greeting.jsx";
 import Admin from "./pages/Admin.jsx";
+import PermissionLetter from "./pages/PermissionLetter.jsx";
 
 const App = () => (
   <Routes>
@@ -14,6 +15,7 @@ const App = () => (
     <Route path="/nontech"  element={<NonTech />} />
     <Route path="/greeting" element={<Greeting />} />
     <Route path="/admin"    element={<Admin />} />
+    <Route path="/permission-letter" element={<PermissionLetter />} />
   </Routes>
 );
 
