@@ -10,6 +10,7 @@ export default function PermissionLetter() {
   const [lookupErr,  setLookupErr]  = useState("");
   const [loading,    setLoading]    = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [popupMsg,   setPopupMsg]   = useState("");   // for error/success popup
 
   // Step 1 — look up registrations for roll number
   const handleLookup = async (e) => {
@@ -50,7 +51,7 @@ export default function PermissionLetter() {
       if (response.data.type === "application/json") {
         const text = await response.data.text();
         const json = JSON.parse(text);
-        alert(json.message || "Failed to generate letter.");
+        setPopupMsg(json.message || "Failed to generate letter.");
         return;
       }
 
@@ -65,7 +66,7 @@ export default function PermissionLetter() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to generate. Please try again.";
-      alert(msg);
+      setPopupMsg(msg);
     } finally {
       setGenerating(false);
     }
@@ -176,18 +177,41 @@ export default function PermissionLetter() {
               </div>
 
               {/* Info box */}
-              <div style={{
-                background: "rgba(212,175,55,0.07)", border: "1px solid rgba(212,175,55,0.2)",
-                borderRadius: 8, padding: "12px 14px", marginBottom: 22, fontSize: "0.85rem", color: "#bbb",
-              }}>
-                📄 The letter will include your name, roll number, college and event details along with a QR code for verification.
-              </div>
+              {event && event.toLowerCase() === "debate" ? (
+                <div style={{
+                  background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)",
+                  borderRadius: 8, padding: "16px 14px", marginBottom: 22, fontSize: "0.9rem", color: "#fca5a5",
+                }}>
+                  ⚠️ We can't provide the permission letter for the debate event. We provide that on the event day. Please contact event coordinators for any queries.
+                </div>
+              ) : (
+                <div style={{
+                  background: "rgba(212,175,55,0.07)", border: "1px solid rgba(212,175,55,0.2)",
+                  borderRadius: 8, padding: "12px 14px", marginBottom: 22, fontSize: "0.85rem", color: "#bbb",
+                }}>
+                  📄 The letter will include your name, roll number, college and event details along with a QR code for verification.
+                </div>
+              )}
 
-              <form onSubmit={handleDownload}>
-                <button type="submit" className="btn-submit" disabled={generating || !event}>
-                  {generating ? "⏳ Generating PDF…" : "⬇️ Download Permission Letter"}
+              {event && event.toLowerCase() === "debate" ? (
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    width: "100%", padding: "12px", fontSize: "1rem", fontWeight: 600,
+                    background: "rgba(107,114,128,0.6)", color: "#999", border: "none",
+                    borderRadius: 8, cursor: "not-allowed",
+                  }}
+                >
+                  ❌ Not Available for Debate
                 </button>
-              </form>
+              ) : (
+                <form onSubmit={handleDownload}>
+                  <button type="submit" className="btn-submit" disabled={generating || !event}>
+                    {generating ? "⏳ Generating PDF…" : "⬇️ Download Permission Letter"}
+                  </button>
+                </form>
+              )}
 
               {generating && (
                 <p className="loading-note">Please wait, generating your PDF…</p>
@@ -196,6 +220,35 @@ export default function PermissionLetter() {
           )}
         </div>
       </section>
+
+      {/* Error/Message Popup */}
+      {popupMsg && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+          background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center",
+          justifyContent: "center", zIndex: 1000,
+        }}>
+          <div style={{
+            background: "#1a1a1a", border: "1px solid #d4af37", borderRadius: 12,
+            padding: "30px 25px", maxWidth: 400, textAlign: "center",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+          }}>
+            <h3 style={{ color: "#f87171", marginTop: 0, marginBottom: 12 }}>⚠️ Alert</h3>
+            <p style={{ color: "#ddd", fontSize: "0.95rem", lineHeight: "1.5", marginBottom: 20 }}>
+              {popupMsg}
+            </p>
+            <button
+              onClick={() => setPopupMsg("")}
+              style={{
+                background: "#d4af37", color: "#000", border: "none", borderRadius: 6,
+                padding: "10px 24px", fontSize: "0.95rem", fontWeight: 600, cursor: "pointer",
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       <footer>© 2026 ECLECTICA — ECE Dept, MITS Deemed University</footer>
     </div>

@@ -10,9 +10,7 @@ export default function Admin() {
 
   const [data,       setData]       = useState([]);
   const [loading,    setLoading]    = useState(false);
-  const [search,     setSearch]     = useState("");
-  const [filterEvent, setFilterEvent] = useState("All");
-  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterEvent, setFilterEvent] = useState("");
 
   // ── Login ──────────────────────────────────────────────────────────────────
   const handleLogin = async (e) => {
@@ -65,22 +63,59 @@ export default function Admin() {
     return { total, pending, verified, free };
   }, [data]);
 
-  const allEvents = useMemo(() => ["All", ...new Set(data.map(r => r.event))], [data]);
+  const allEvents = useMemo(() => [...new Set(data.map(r => r.event))], [data]);
 
-  // ── Filtered data ─────────────────────────────────────────────────────────
+  // ── Filtered data (by event only) ─────────────────────────────────────────
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return data.filter(r => {
-      const matchEvent  = filterEvent  === "All" || r.event         === filterEvent;
-      const matchStatus = filterStatus === "All" || r.paymentStatus === filterStatus;
-      const matchSearch = !q || r.name.toLowerCase().includes(q) ||
-        r.rollnumber.toLowerCase().includes(q) || r.college.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q);
-      return matchEvent && matchStatus && matchSearch;
-    });
-  }, [data, search, filterEvent, filterStatus]);
+    if (!filterEvent) return data;  // Show all if no event selected
+    return data.filter(r => r.event === filterEvent);
+  }, [data, filterEvent]);
 
   const fmt = d => new Date(d).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+
+  // ── Download CSV ────────────────────────────────────────────────────────────
+  const downloadCSV = (records, filename) => {
+    if (records.length === 0) {
+      alert("No data to download.");
+      return;
+    }
+
+    const headers = ["Name", "Roll No", "College", "Department", "Year", "Event", "Contact", "Email", "UTR", "Payment Status", "Date"];
+    const rows = records.map(r => [
+      r.name,
+      `'${r.rollnumber}`,  // Prefix with apostrophe to prevent scientific notation
+      r.college,
+      r.department,
+      r.year,
+      r.event,
+      `'${r.contactnumber}`,  // Prefix with apostrophe to prevent scientific notation
+      r.email,
+      `'${r.utrNumber || "—"}`,  // Prefix with apostrophe for consistency
+      r.paymentStatus,
+      fmt(r.createdAt),
+    ]);
+
+    const csv = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Download event data ────────────────────────────────────────────────────
+  const handleDownloadEvent = () => {
+    const eventName = filterEvent ? filterEvent.replace(/\s+/g, "-") : "all-events";
+    const filename = `Registrations_${eventName}_${new Date().toISOString().split("T")[0]}.csv`;
+    downloadCSV(filtered, filename);
+  };
 
   // ── Login Screen ──────────────────────────────────────────────────────────
   if (!loggedIn) {
@@ -110,7 +145,7 @@ export default function Admin() {
     <div className="dashboard">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 4 }}>
         <h2>📋 Registrations Dashboard</h2>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button className="btn-verify" onClick={fetchData} style={{ padding: "7px 16px" }}>↻ Refresh</button>
           <button className="btn-verify" onClick={() => setLoggedIn(false)} style={{ padding: "7px 16px", color: "#f87171", borderColor: "rgba(248,113,113,0.4)", background: "rgba(248,113,113,0.1)" }}>Logout</button>
         </div>
@@ -125,23 +160,24 @@ export default function Admin() {
         <div className="stat-box"><div className="num">{stats.free}</div><div className="lbl">Free (Debate)</div></div>
       </div>
 
-      {/* Filters */}
-      <div className="filters">
-        <input
-          placeholder="Search name, roll no, college…"
-          value={search} onChange={e => setSearch(e.target.value)}
+      {/* Event Filter */}
+      <div className="filters" style={{ gap: 12 }}>
+        <select 
+          value={filterEvent} 
+          onChange={e => setFilterEvent(e.target.value)}
           style={{ minWidth: 220 }}
-        />
-        <select value={filterEvent} onChange={e => setFilterEvent(e.target.value)}>
+        >
+          <option value="">All Events</option>
           {allEvents.map(ev => <option key={ev} value={ev}>{ev}</option>)}
         </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-          <option value="All">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="verified">Verified</option>
-          <option value="free">Free</option>
-        </select>
-        <span style={{ color: "#888", fontSize: "0.85rem" }}>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
+        <span style={{ color: "#888", fontSize: "0.85rem" }}>{filtered.length} registration{filtered.length !== 1 ? "s" : ""}</span>
+        <button 
+          className="btn-verify" 
+          onClick={handleDownloadEvent}
+          style={{ padding: "7px 16px", background: "rgba(74,222,128,0.1)", color: "#4ade80", borderColor: "rgba(74,222,128,0.4)" }}
+        >
+          ⬇️ Download {filterEvent ? filterEvent : "All Events"}
+        </button>
       </div>
 
       {/* Table */}
