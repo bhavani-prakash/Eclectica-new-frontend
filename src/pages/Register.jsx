@@ -18,6 +18,7 @@ const NONTECH_EVENTS  = ["Free Fire","BGMI","cineQuest","Balloon Spirit","Rope R
 export default function Register() {
   const navigate       = useNavigate();
   const [params]       = useSearchParams();
+  const formRef        = React.useRef(null);
 
   // form state
   const [name,            setName]           = useState("");
@@ -51,6 +52,14 @@ export default function Register() {
   const isFree   = event === "Debate";
   const isFromUrl = Boolean(urlEvent && urlType);
   const isRedirected = params.get("redirected") === "true";
+
+  const clearForm = () => {
+    setName(""); setEmail(""); setCollege(""); setRollnumber("");
+    setContact(""); setWhatsapp(""); setYear(""); setDepartment("");
+    setEventType(""); setEvent(""); setFee(0); setUtr("");
+    setScreenshot(null); setPreview(null);
+    if (formRef.current) formRef.current.reset();
+  };
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
@@ -106,8 +115,9 @@ export default function Register() {
       const { data } = await axios.post(`${API}/api/register`, formData, { timeout: 60000 });
 
       if (data.success) {
-        if (data.alreadyRegistered) {
-          alert("You are already registered for this event.");
+        if (data.alreadyRegistered === true) {
+          alert("You are already registered for this event.\n\nIf you'd like to register for a different event, please clear the form and try again with a different event.");
+          clearForm();
         } else {
           navigate("/greeting");
         }
@@ -133,7 +143,7 @@ export default function Register() {
       </section>
 
       <section className="form-section">
-        <form className="reg-form" onSubmit={handleSubmit}>
+        <form className="reg-form" ref={formRef} onSubmit={handleSubmit}>
 
           {/* Redirect banner */}
           {isRedirected && (
